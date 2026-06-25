@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import AppLayout from '@/components/layout/AppLayout'
 import { Toast, toast } from '@/components/ui/Toast'
 import { useDashboard } from '@/hooks/useDashboard'
@@ -28,13 +30,31 @@ export default function ConfiguracoesPage() {
       skipEmptyLines: true,
       encoding: 'UTF-8',
       complete: async (results) => {
-        const rows = (results.data as Record<string, string>[]).map(sanitizeCSVRow)
-        const valid = rows.filter(r => r.os_number)
-        const added = await db.importOrders(valid)
-        toast(`CSV importado — ${ptn(added)} novas OS adicionadas!`)
+        try {
+          const rows = (results.data as Record<string, string>[]).map(sanitizeCSVRow)
+          const valid = rows.filter(r => r.os_number)
+
+          if (valid.length === 0) {
+            toast('Nenhuma OS válida encontrada no CSV.', 'err')
+            setImporting(false)
+            return
+          }
+
+          await db.importOrders(valid)
+          await db.loadAll()
+          toast(`CSV importado — ${ptn(valid.length)} OS processadas!`)
+        } catch (err) {
+          console.error('Erro ao importar CSV:', err)
+          toast('Erro ao importar CSV.', 'err')
+        } finally {
+          setImporting(false)
+        }
+      },
+      error: (err) => {
+        console.error('Erro ao ler CSV:', err)
+        toast('Erro ao ler o CSV.', 'err')
         setImporting(false)
       },
-      error: () => { toast('Erro ao ler o CSV.', 'err'); setImporting(false) },
     })
   }
 
@@ -61,16 +81,16 @@ export default function ConfiguracoesPage() {
 
   // Available months in data
   const months = Array.from(
-  new Set(
-    db.allOrders
-      .map(o => (o.executed_at || '').slice(0, 7))
-      .filter(Boolean)
+    new Set(
+      db.allOrders
+        .map(o => (o.executed_at || '').slice(0, 7))
+        .filter(Boolean)
     )
   ).sort()
 
   const allTeams = db.getTeams()
   const removedTeamsList = Array.from(db.removedTeams)
-  
+
   if (db.loading) return <AppLayout><div style={{ padding:40, color:'var(--text2)' }}>Carregando…</div></AppLayout>
 
   if (db.userRole !== 'admin') return (
