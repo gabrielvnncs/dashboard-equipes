@@ -91,9 +91,27 @@ export function useDashboard() {
 
   // ── Recompute filtered + stats when data or filters change ───
   useEffect(() => {
-    const filtered = applyFilters(allOrders, filters, new Set([...hiddenTeams, ...removedTeams]))
+    const excludedTeams = new Set([
+      ...Array.from(hiddenTeams),
+      ...Array.from(removedTeams)
+    ])
+
+    const filtered = applyFilters(
+      allOrders,
+      filters,
+      excludedTeams
+    )
+
     setFilteredOrders(filtered)
-    setTeamStats(computeTeamStats(filtered, scores, removedServices, new Set([...hiddenTeams, ...removedTeams])))
+
+    setTeamStats(
+      computeTeamStats(
+        filtered,
+        scores,
+        removedServices,
+        excludedTeams
+      )
+    )
   }, [allOrders, filters, scores, teamSettings, removedServices])
 
   // ── Score update ─────────────────────────────────────────────
