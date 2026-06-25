@@ -31,7 +31,7 @@ export default function ServicosPage() {
   if (search) svcs = svcs.filter(([n]) => n.toLowerCase().includes(search.toLowerCase()))
   if (tipoFilter) svcs = svcs.filter(([, d]) => d.tipo === tipoFilter)
 
-  const tipos = [...new Set(Object.values(svcMap).map(d => d.tipo).filter(t => t && t !== '—'))].sort()
+  const tipos = Array.from(new Set(Object.values(svcMap).map(d => d.tipo).filter(t => t && t !== '—'))).sort()
 
   async function handleScoreChange(service: string, val: string) {
     const pts = parseFloat(val) || 0

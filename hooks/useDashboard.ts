@@ -196,9 +196,9 @@ export function useDashboard() {
 
   // ── All teams (visible + custom, not removed) ────────────────
   function getTeams() {
-    const fromData = [...new Set(allOrders.map(o => o.team).filter(Boolean))] as string[]
+    const fromData = Array.from(new Set(allOrders.map(o => o.team).filter(Boolean))) as string[]
     const customTs = teamSettings.filter(t => t.is_custom).map(t => t.team)
-    return [...new Set([...fromData, ...customTs])]
+    return Array.from(new Set([...fromData, ...customTs])
       .filter(t => !removedTeams.has(t))
       .sort()
   }

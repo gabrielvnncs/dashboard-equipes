@@ -51,9 +51,13 @@ export default function DashboardPage() {
   const leader   = teams[0]
 
   // Months available
-  const months = [...new Set(
-    db.allOrders.map(o => (o.executed_at || '').slice(0, 7)).filter(Boolean)
-  )].sort()
+  const months = Array.from(
+  new Set(
+    db.allOrders
+      .map(o => (o.executed_at || '').slice(0, 7))
+      .filter(Boolean)
+  )
+).sort()
 
   // Month chips
   function selectMonth(month: string) {
@@ -80,9 +84,9 @@ export default function DashboardPage() {
   const topSvcs = Object.entries(svcCnt).sort((a,b) => b[1]-a[1]).slice(0,8)
 
   // Periods for history
-  const periods = [...new Set(
+  const periods = Array.from(new Set(
     db.filteredOrders.map(o => (o.executed_at||'').slice(0,7)).filter(Boolean)
-  )].sort()
+  )).sort()
 
   function buildHistDatasets() {
     if (histMode === 'total') {
@@ -122,7 +126,7 @@ export default function DashboardPage() {
   }
 
   const stackedTeams = teams.slice(0, 8)
-  const allTipos = [...new Set(db.filteredOrders.map(o => o.service_type).filter(Boolean))] as string[]
+  const allTipos = Array.from(new Set(db.filteredOrders.map(o => o.service_type).filter(Boolean))) as string[]
 
   if (db.loading) return (
     <AppLayout>
@@ -258,7 +262,7 @@ export default function DashboardPage() {
             </select>
             {histMode === 'byservice' && (
               <select className="input input-sm" style={{ maxWidth:220 }} value={histSvc} onChange={e => setHistSvc(e.target.value)}>
-                {[...new Set(db.filteredOrders.map(o => o.service).filter(s => s && !db.removedServices.has(s!)) as string[])].sort().map(s => (
+                {Array.from(new Set(db.filteredOrders.map(o => o.service).filter(s => s && !db.removedServices.has(s!)) as string[])).sort().map(s => (
                   <option key={s} value={s}>{trunc(s, 40)}</option>
                 ))}
               </select>
