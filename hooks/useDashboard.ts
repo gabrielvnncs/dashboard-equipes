@@ -68,16 +68,21 @@ export function useDashboard() {
       setRemovedServices(new Set((rsvc || []).map((r: { service: string }) => r.service)))
 
       // set default date range
+      // set default date range apenas na primeira carga
       if (orders?.length) {
         const dates = orders
           .map((o: WorkOrder) => o.executed_at)
           .filter(Boolean)
           .sort() as string[]
-        setFilters(prev => ({
-          ...prev,
-          dateStart: dates[dates.length - 1] ? dates[0] : '',
-          dateEnd:   dates[dates.length - 1] || '',
-        }))
+        setFilters(prev => {
+          // se já tem filtro de data definido, não sobrescreve
+          if (prev.dateStart || prev.dateEnd) return prev
+          return {
+            ...prev,
+            dateStart: dates[0] || '',
+            dateEnd:   dates[dates.length - 1] || '',
+          }
+        })
       }
     } catch (err) {
       toast('Erro ao carregar dados.', 'err')
