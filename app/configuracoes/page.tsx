@@ -60,9 +60,13 @@ export default function ConfiguracoesPage() {
   }
 
   // Available months in data
-  const months = [...new Set(
-    db.allOrders.map(o => (o.executed_at || '').slice(0, 7)).filter(Boolean)
-  )].sort()
+  const months = Array.from(
+  new Set(
+    db.allOrders
+      .map(o => (o.executed_at || '').slice(0, 7))
+      .filter(Boolean)
+    )
+  ).sort()
 
   const allTeams = db.getTeams()
   const removedTeamsList = [...db.removedTeams]
