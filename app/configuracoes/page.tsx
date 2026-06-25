@@ -69,8 +69,8 @@ export default function ConfiguracoesPage() {
   ).sort()
 
   const allTeams = db.getTeams()
-  const removedTeamsList = [...db.removedTeams]
-
+  const removedTeamsList = Array.from(db.removedTeams)
+  
   if (db.loading) return <AppLayout><div style={{ padding:40, color:'var(--text2)' }}>Carregando…</div></AppLayout>
 
   if (db.userRole !== 'admin') return (
