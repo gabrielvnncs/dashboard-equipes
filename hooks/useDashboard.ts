@@ -170,7 +170,7 @@ export function useDashboard() {
 
   // ── Service blacklist ────────────────────────────────────────
   async function removeService(service: string) {
-    setRemovedServices(prev => new Set([...prev, service]))
+    setRemovedServices(prev => new Set([...Array.from(prev), service]))
     setScores(prev => { const n = { ...prev }; delete n[service]; return n })
     await supabase.from('removed_services').upsert({ service })
     await supabase.from('scores').delete().eq('service', service)
