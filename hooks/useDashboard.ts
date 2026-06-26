@@ -67,15 +67,14 @@ export function useDashboard() {
       setTeamSettings(teams || [])
       setRemovedServices(new Set((rsvc || []).map((r: { service: string }) => r.service)))
 
-      // set default date range
       // set default date range apenas na primeira carga
+      // se já tem filtro definido (ex: após importar 2º CSV), não sobrescreve
       if (orders?.length) {
         const dates = orders
           .map((o: WorkOrder) => o.executed_at)
           .filter(Boolean)
           .sort() as string[]
         setFilters(prev => {
-          // se já tem filtro de data definido, não sobrescreve
           if (prev.dateStart || prev.dateEnd) return prev
           return {
             ...prev,
