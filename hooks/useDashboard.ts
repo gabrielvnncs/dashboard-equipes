@@ -68,14 +68,14 @@ export function useDashboard() {
       setTeamSettings(teams || [])
       setRemovedServices(new Set((rsvc || []).map((r: { service: string }) => r.service)))
 
-      // Sempre seta o range para cobrir TODAS as OS do banco
+      // Seta o range para cobrir TODAS as OS do banco
       if (orders?.length) {
-        const dates = orders
+        const allDates = orders
           .map((o: WorkOrder) => o.executed_at)
-          .filter(Boolean)
-          .sort() as string[]
-        const minDate = dates[0] || ''
-        const maxDate = dates[dates.length - 1] || ''
+          .filter(Boolean) as string[]
+        // Usa reduce para garantir min/max independente de ordenação
+        const minDate = allDates.reduce((a, b) => a < b ? a : b)
+        const maxDate = allDates.reduce((a, b) => a > b ? a : b)
         setFilters(prev => ({
           ...prev,
           dateStart: minDate,
