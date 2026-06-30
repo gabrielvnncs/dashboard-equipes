@@ -67,21 +67,17 @@ export function useDashboard() {
       setTeamSettings(teams || [])
       setRemovedServices(new Set((rsvc || []).map((r: { service: string }) => r.service)))
 
-      // set default date range apenas na primeira carga
-      // se já tem filtro definido (ex: após importar 2º CSV), não sobrescreve
+      // Sempre expande o range de datas para cobrir todas as OS no banco
       if (orders?.length) {
         const dates = orders
           .map((o: WorkOrder) => o.executed_at)
           .filter(Boolean)
           .sort() as string[]
-        setFilters(prev => {
-          if (prev.dateStart || prev.dateEnd) return prev
-          return {
-            ...prev,
-            dateStart: dates[0] || '',
-            dateEnd:   dates[dates.length - 1] || '',
-          }
-        })
+        setFilters(prev => ({
+          ...prev,
+          dateStart: dates[0] || '',
+          dateEnd:   dates[dates.length - 1] || '',
+        }))
       }
     } catch (err) {
       toast('Erro ao carregar dados.', 'err')
@@ -182,7 +178,6 @@ export function useDashboard() {
 
   // ── Purge by month ───────────────────────────────────────────
   async function purgeByMonth(monthKey: string) {
-    // monthKey = "2026-04"
     const { error } = await supabase
       .from('work_orders')
       .delete()
@@ -194,7 +189,6 @@ export function useDashboard() {
 
   // ── CSV import (upsert batch) ────────────────────────────────
   async function importOrders(rows: Partial<WorkOrder>[]) {
-    // Upsert in batches of 500
     const BATCH = 500
     let added = 0
     for (let i = 0; i < rows.length; i += BATCH) {
@@ -242,4 +236,4 @@ export function useDashboard() {
     updateScore, setTeamHidden, setTeamRemoved, setTeamAlias,
     addCustomTeam, removeService, purgeByMonth, importOrders,
   }
-}
+}s
