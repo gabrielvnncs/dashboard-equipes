@@ -53,7 +53,7 @@ export function useDashboard() {
         { data: teams } ,
         { data: rsvc }  ,
       ] = await Promise.all([
-        supabase.from('work_orders').select('*').order('executed_at', { ascending: false }).limit(100000),
+        supabase.from('work_orders').select('*').order('executed_at', { ascending: false }).limit(10000),
         supabase.from('scores').select('*'),
         supabase.from('team_settings').select('*'),
         supabase.from('removed_services').select('service'),
@@ -68,7 +68,7 @@ export function useDashboard() {
       setTeamSettings(teams || [])
       setRemovedServices(new Set((rsvc || []).map((r: { service: string }) => r.service)))
 
-      // Expande o range de datas para cobrir todas as OS do banco
+      // Sempre seta o range para cobrir TODAS as OS do banco
       if (orders?.length) {
         const dates = orders
           .map((o: WorkOrder) => o.executed_at)
@@ -76,22 +76,11 @@ export function useDashboard() {
           .sort() as string[]
         const minDate = dates[0] || ''
         const maxDate = dates[dates.length - 1] || ''
-        if (!initialLoadDone.current) {
-          // Primeira carga: define o range inicial
-          initialLoadDone.current = true
-          setFilters(prev => ({
-            ...prev,
-            dateStart: minDate,
-            dateEnd:   maxDate,
-          }))
-        } else {
-          // Cargas subsequentes (ex: após importar CSV): só expande, nunca reduz
-          setFilters(prev => ({
-            ...prev,
-            dateStart: (!prev.dateStart || minDate < prev.dateStart) ? minDate : prev.dateStart,
-            dateEnd:   (!prev.dateEnd   || maxDate > prev.dateEnd)   ? maxDate : prev.dateEnd,
-          }))
-        }
+        setFilters(prev => ({
+          ...prev,
+          dateStart: minDate,
+          dateEnd:   maxDate,
+        }))
       }
     } catch (err) {
       toast('Erro ao carregar dados.', 'err')
@@ -220,6 +209,8 @@ export function useDashboard() {
         }
       })
     }
+    // Aguarda o Supabase processar antes de recarregar
+    await new Promise(r => setTimeout(r, 500))
     await loadAll()
     return added
   }

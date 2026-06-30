@@ -41,7 +41,6 @@ export default function ConfiguracoesPage() {
           }
 
           await db.importOrders(valid)
-          await db.loadAll()
           toast(`CSV importado — ${ptn(valid.length)} OS processadas!`)
         } catch (err) {
           console.error('Erro ao importar CSV:', err)
