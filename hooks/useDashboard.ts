@@ -236,4 +236,4 @@ export function useDashboard() {
     updateScore, setTeamHidden, setTeamRemoved, setTeamAlias,
     addCustomTeam, removeService, purgeByMonth, importOrders,
   }
-}s
+}
