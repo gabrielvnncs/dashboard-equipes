@@ -67,16 +67,18 @@ export function useDashboard() {
       setTeamSettings(teams || [])
       setRemovedServices(new Set((rsvc || []).map((r: { service: string }) => r.service)))
 
-      // Sempre expande o range de datas para cobrir todas as OS no banco
+      // Expande o range de datas para sempre cobrir todas as OS do banco
       if (orders?.length) {
         const dates = orders
           .map((o: WorkOrder) => o.executed_at)
           .filter(Boolean)
           .sort() as string[]
+        const minDate = dates[0] || ''
+        const maxDate = dates[dates.length - 1] || ''
         setFilters(prev => ({
           ...prev,
-          dateStart: dates[0] || '',
-          dateEnd:   dates[dates.length - 1] || '',
+          dateStart: prev.dateStart && prev.dateStart < minDate ? prev.dateStart : minDate,
+          dateEnd:   prev.dateEnd   && prev.dateEnd   > maxDate ? prev.dateEnd   : maxDate,
         }))
       }
     } catch (err) {
