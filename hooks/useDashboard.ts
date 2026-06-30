@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { applyFilters, computeTeamStats } from '@/lib/utils'
 import type { WorkOrder, Score, TeamSetting, Filters, TeamStats } from '@/types'
@@ -32,6 +32,7 @@ export function useDashboard() {
   // UI state
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
+  const initialLoadDone = useRef(false)
   const { user: currentUser } = useUser()
   const userRole = currentUser?.role || 'viewer'
 
@@ -52,7 +53,7 @@ export function useDashboard() {
         { data: teams } ,
         { data: rsvc }  ,
       ] = await Promise.all([
-        supabase.from('work_orders').select('*').order('executed_at', { ascending: false }),
+        supabase.from('work_orders').select('*').order('executed_at', { ascending: false }).limit(100000),
         supabase.from('scores').select('*'),
         supabase.from('team_settings').select('*'),
         supabase.from('removed_services').select('service'),
@@ -67,7 +68,7 @@ export function useDashboard() {
       setTeamSettings(teams || [])
       setRemovedServices(new Set((rsvc || []).map((r: { service: string }) => r.service)))
 
-      // Expande o range de datas para sempre cobrir todas as OS do banco
+      // Expande o range de datas para cobrir todas as OS do banco
       if (orders?.length) {
         const dates = orders
           .map((o: WorkOrder) => o.executed_at)
@@ -75,11 +76,22 @@ export function useDashboard() {
           .sort() as string[]
         const minDate = dates[0] || ''
         const maxDate = dates[dates.length - 1] || ''
-        setFilters(prev => ({
-          ...prev,
-          dateStart: prev.dateStart && prev.dateStart < minDate ? prev.dateStart : minDate,
-          dateEnd:   prev.dateEnd   && prev.dateEnd   > maxDate ? prev.dateEnd   : maxDate,
-        }))
+        if (!initialLoadDone.current) {
+          // Primeira carga: define o range inicial
+          initialLoadDone.current = true
+          setFilters(prev => ({
+            ...prev,
+            dateStart: minDate,
+            dateEnd:   maxDate,
+          }))
+        } else {
+          // Cargas subsequentes (ex: após importar CSV): só expande, nunca reduz
+          setFilters(prev => ({
+            ...prev,
+            dateStart: (!prev.dateStart || minDate < prev.dateStart) ? minDate : prev.dateStart,
+            dateEnd:   (!prev.dateEnd   || maxDate > prev.dateEnd)   ? maxDate : prev.dateEnd,
+          }))
+        }
       }
     } catch (err) {
       toast('Erro ao carregar dados.', 'err')
