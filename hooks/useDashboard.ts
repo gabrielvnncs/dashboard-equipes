@@ -47,18 +47,33 @@ export function useDashboard() {
   const loadAll = useCallback(async () => {
     setLoading(true)
     try {
+      // Busca work_orders em páginas de 1000 para contornar limite do Supabase
+      let allOrdersData: WorkOrder[] = []
+      let page = 0
+      const PAGE_SIZE = 1000
+      while (true) {
+        const { data: batch, error } = await supabase
+          .from('work_orders')
+          .select('*')
+          .order('executed_at', { ascending: false })
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+        if (error || !batch || batch.length === 0) break
+        allOrdersData = [...allOrdersData, ...batch]
+        if (batch.length < PAGE_SIZE) break
+        page++
+      }
+
       const [
-        { data: orders },
         { data: scrs }  ,
         { data: teams } ,
         { data: rsvc }  ,
       ] = await Promise.all([
-        supabase.from('work_orders').select('*').order('executed_at', { ascending: false }).limit(10000),
         supabase.from('scores').select('*'),
         supabase.from('team_settings').select('*'),
         supabase.from('removed_services').select('service'),
       ])
 
+      const orders = allOrdersData
       setAllOrders(orders || [])
 
       const scMap: Record<string, number> = {}
