@@ -68,20 +68,7 @@ export function useDashboard() {
       setTeamSettings(teams || [])
       setRemovedServices(new Set((rsvc || []).map((r: { service: string }) => r.service)))
 
-      // Seta o range para cobrir TODAS as OS do banco
-      if (orders?.length) {
-        const allDates = orders
-          .map((o: WorkOrder) => o.executed_at)
-          .filter(Boolean) as string[]
-        // Usa reduce para garantir min/max independente de ordenação
-        const minDate = allDates.reduce((a, b) => a < b ? a : b)
-        const maxDate = allDates.reduce((a, b) => a > b ? a : b)
-        setFilters(prev => ({
-          ...prev,
-          dateStart: minDate,
-          dateEnd:   maxDate,
-        }))
-      }
+      // Não seta filtro de data — mostra todas as OS por padrão
     } catch (err) {
       toast('Erro ao carregar dados.', 'err')
       console.error(err)
