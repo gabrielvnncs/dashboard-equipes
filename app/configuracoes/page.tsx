@@ -6,16 +6,20 @@ import AppLayout from '@/components/layout/AppLayout'
 import { Toast, toast } from '@/components/ui/Toast'
 import { useDashboard } from '@/hooks/useDashboard'
 import { ptn } from '@/lib/utils'
-import { ALLOWED_COLUMNS, MONTH_NAMES } from '@/types'
+import { MONTH_NAMES } from '@/types'
 import { sanitizeCSVRow } from '@/lib/utils'
 import { useRef, useState } from 'react'
 import Papa from 'papaparse'
+import { createClient } from '@/lib/supabase'
 
 export default function ConfiguracoesPage() {
   const db = useDashboard()
+  const supabase = createClient()
   const fileRef  = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
   const [purgeMonth, setPurgeMonth] = useState('')
+  const [purgeService, setPurgeService] = useState('')
+  const [purgeTeam, setPurgeTeam] = useState('')
   const [aliasEdits, setAliasEdits] = useState<Record<string,string>>({})
 
   // ── CSV import ───────────────────────────────────────────────
@@ -66,8 +70,8 @@ export default function ConfiguracoesPage() {
     toast('Apelidos salvos!')
   }
 
-  // ── Purge ────────────────────────────────────────────────────
-  async function handlePurge() {
+  // ── Purge by month ───────────────────────────────────────────
+  async function handlePurgeMonth() {
     if (!purgeMonth) { toast('Selecione um mês.', 'err'); return }
     const [y, mo] = purgeMonth.split('-')
     const label = MONTH_NAMES[parseInt(mo)-1] + '/' + y
@@ -78,14 +82,47 @@ export default function ConfiguracoesPage() {
     setPurgeMonth('')
   }
 
-  // Available months in data
+  // ── Purge by service ─────────────────────────────────────────
+  async function handlePurgeService() {
+    if (!purgeService) { toast('Selecione um serviço.', 'err'); return }
+    const cnt = db.allOrders.filter(o => o.service === purgeService).length
+    if (!cnt) { toast('Nenhuma OS com este serviço.', 'err'); return }
+    if (!confirm(`Remover ${cnt} OS do serviço "${purgeService}"?\n\nEsta ação não pode ser desfeita.`)) return
+    const { error } = await supabase
+      .from('work_orders')
+      .delete()
+      .eq('service', purgeService)
+    if (error) { toast('Erro ao remover OS.', 'err'); return }
+    await db.loadAll()
+    toast(`${cnt} OS do serviço removidas!`)
+    setPurgeService('')
+  }
+
+  // ── Purge by team ─────────────────────────────────────────────
+  async function handlePurgeTeam() {
+    if (!purgeTeam) { toast('Selecione uma equipe.', 'err'); return }
+    const cnt = db.allOrders.filter(o => o.team === purgeTeam).length
+    if (!cnt) { toast('Nenhuma OS desta equipe.', 'err'); return }
+    const alias = db.getAlias(purgeTeam)
+    if (!confirm(`Remover ${cnt} OS da equipe "${alias}"?\n\nEsta ação não pode ser desfeita.`)) return
+    const { error } = await supabase
+      .from('work_orders')
+      .delete()
+      .eq('team', purgeTeam)
+    if (error) { toast('Erro ao remover OS.', 'err'); return }
+    await db.loadAll()
+    toast(`${cnt} OS da equipe removidas!`)
+    setPurgeTeam('')
+  }
+
+  // Available months, services and teams
   const months = Array.from(
-    new Set(
-      db.allOrders
-        .map(o => (o.executed_at || '').slice(0, 7))
-        .filter(Boolean)
-    )
+    new Set(db.allOrders.map(o => (o.executed_at || '').slice(0, 7)).filter(Boolean))
   ).sort()
+
+  const allServices = Array.from(
+    new Set(db.allOrders.map(o => o.service).filter(Boolean))
+  ).sort() as string[]
 
   const allTeams = db.getTeams()
   const removedTeamsList = Array.from(db.removedTeams)
@@ -244,7 +281,57 @@ export default function ConfiguracoesPage() {
               return <option key={m} value={m}>{label} — {ptn(cnt)} OS</option>
             })}
           </select>
-          <button className="btn btn-danger btn-sm" onClick={handlePurge}>🗑 Remover OS deste mês</button>
+          <button className="btn btn-danger btn-sm" onClick={handlePurgeMonth}>🗑 Remover OS deste mês</button>
+        </div>
+      </section>
+
+      <div className="divider" />
+
+      {/* ── Purge by service ── */}
+      <section style={{ marginBottom:32 }}>
+        <h3 style={{ fontSize:'.95rem', fontWeight:800, marginBottom:6 }}>Remover OS por Serviço</h3>
+        <p style={{ fontSize:'.8rem', color:'var(--text2)', marginBottom:14, lineHeight:1.6 }}>
+          Remove permanentemente todas as OS do serviço selecionado.
+        </p>
+        <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          <select
+            className="input input-sm"
+            style={{ width:'auto', minWidth:280 }}
+            value={purgeService}
+            onChange={e => setPurgeService(e.target.value)}
+          >
+            <option value="">Selecione o serviço…</option>
+            {allServices.map(s => {
+              const cnt = db.allOrders.filter(o => o.service === s).length
+              return <option key={s} value={s}>{s} — {ptn(cnt)} OS</option>
+            })}
+          </select>
+          <button className="btn btn-danger btn-sm" onClick={handlePurgeService}>🗑 Remover OS deste serviço</button>
+        </div>
+      </section>
+
+      <div className="divider" />
+
+      {/* ── Purge by team ── */}
+      <section style={{ marginBottom:32 }}>
+        <h3 style={{ fontSize:'.95rem', fontWeight:800, marginBottom:6 }}>Remover OS por Equipe</h3>
+        <p style={{ fontSize:'.8rem', color:'var(--text2)', marginBottom:14, lineHeight:1.6 }}>
+          Remove permanentemente todas as OS da equipe selecionada.
+        </p>
+        <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          <select
+            className="input input-sm"
+            style={{ width:'auto', minWidth:280 }}
+            value={purgeTeam}
+            onChange={e => setPurgeTeam(e.target.value)}
+          >
+            <option value="">Selecione a equipe…</option>
+            {allTeams.map(t => {
+              const cnt = db.allOrders.filter(o => o.team === t).length
+              return <option key={t} value={t}>{db.getAlias(t)} — {ptn(cnt)} OS</option>
+            })}
+          </select>
+          <button className="btn btn-danger btn-sm" onClick={handlePurgeTeam}>🗑 Remover OS desta equipe</button>
         </div>
       </section>
 

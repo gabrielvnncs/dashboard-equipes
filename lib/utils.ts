@@ -41,6 +41,11 @@ export function sanitizeCSVRow(obj: Record<string, string>): Partial<WorkOrder> 
     if (obj[col] !== undefined) clean[col] = obj[col]
   })
 
+  // Ignora OS que não foram executadas
+  if (clean['Situação'] !== 'Executada') {
+    return { os_number: '' }
+  }
+
   const execRaw = clean['Execução'] || ''
   const execDate = parseExecutionDate(execRaw)
 
