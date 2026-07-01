@@ -29,12 +29,31 @@ export function useDashboard() {
   const [filteredOrders, setFilteredOrders] = useState<WorkOrder[]>([])
   const [teamStats, setTeamStats]           = useState<Record<string, TeamStats>>({})
 
-  // UI state
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+  // UI state - filtros persistidos na sessão para compartilhar entre páginas
+  const [filters, setFilters] = useState<Filters>(() => {
+    if (typeof window === 'undefined') return DEFAULT_FILTERS
+    try {
+      const saved = sessionStorage.getItem('dashboard_filters')
+      if (!saved) return DEFAULT_FILTERS
+      const parsed = JSON.parse(saved)
+      return { ...DEFAULT_FILTERS, ...parsed, activeTipos: new Set(parsed.activeTipos || []) }
+    } catch {
+      return DEFAULT_FILTERS
+    }
+  })
   const [loading, setLoading] = useState(true)
   const initialLoadDone = useRef(false)
   const { user: currentUser } = useUser()
   const userRole = currentUser?.role || 'viewer'
+
+  // Persiste filtros no sessionStorage sempre que mudam
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const toSave = { ...filters, activeTipos: Array.from(filters.activeTipos) }
+      sessionStorage.setItem('dashboard_filters', JSON.stringify(toSave))
+    } catch {}
+  }, [filters])
 
   const hiddenTeams  = new Set(teamSettings.filter(t => t.hidden).map(t => t.team))
   const removedTeams = new Set(teamSettings.filter(t => t.removed).map(t => t.team))
@@ -183,10 +202,17 @@ export function useDashboard() {
 
   // ── Purge by month ───────────────────────────────────────────
   async function purgeByMonth(monthKey: string) {
+    // monthKey = "2025-12"
+    const [year, month] = monthKey.split('-').map(Number)
+    const nextMonth = month === 12
+      ? `${year + 1}-01`
+      : `${year}-${String(month + 1).padStart(2, '0')}`
+
     const { error } = await supabase
       .from('work_orders')
       .delete()
-      .like('executed_at', `${monthKey}%`)
+      .gte('executed_at', `${monthKey}-01`)
+      .lt('executed_at', `${nextMonth}-01`)
     if (error) { toast('Erro ao remover OS.', 'err'); return }
     setAllOrders(prev => prev.filter(o => !(o.executed_at || '').startsWith(monthKey)))
     toast('OS removidas!')
